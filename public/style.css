@@ -117,6 +117,10 @@ input {
 	overflow-y: auto;
 }
 
+#table-cards > img {
+	height: 90%;
+}
+
 #player {
 	width: 80%;
 	height: 15%;
@@ -156,5 +160,5 @@ input {
 }
 
 .hole-card {
-	color: red;
-} 
+	height: 90%;
+}

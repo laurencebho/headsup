@@ -90,14 +90,13 @@ $(function () {
         else {
             $("#opponent-action-header").text("Fold");
             $("#player-action-header").text("Winner");
-            showButtons(0);
         }
         $("#pot-header").text(data.pot + "");
     });
 
     socket.on("hole cards", function(cards) {
         for (var i=0; i<cards.length; i++) {
-            $("#player").append($("<h4 class='hole-card'>").text(cards[i]));
+            $("#player").append($("<img class='hole-card'>").attr("src", "cards/" + cards[i] + ".png"));
         }
     });
 
@@ -236,7 +235,7 @@ function nextRound(data) {
             showButtons(2);
         }
         for (var i=0; i<data.cards.length; i++) {
-            $("#table-cards").append($("<li>").text(data.cards[i]));
+            $("#table-cards").append($("<img>").attr("src", "cards/" + data.cards[i] + ".png"));
         }
         console.log("pot: " + data.pot);
         $("#pot-header").text("Pot: " + data.pot);

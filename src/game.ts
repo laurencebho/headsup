@@ -74,7 +74,7 @@ export class Game {
 			else if (cardNumber == 0) {
 				card += "K";
 			}
-			else {
+			else { //if 1
 				card += "A";
 			}
 
@@ -90,6 +90,7 @@ export class Game {
 			else {
 				card += "h";
 			}
+			console.log(hand[i] + " stringified to " + card); //for checking
 			stringHand.push(card);
 		}
 		return stringHand;
@@ -139,7 +140,7 @@ export class Game {
 	}
 
 	public getRandomCard() : number {
-		var i = Math.floor(Math.random() * 52);
+		var i = Math.floor(Math.random() * this._deck.length);
 		return this._deck.splice(i, 1)[0];
 	}
 
@@ -260,14 +261,14 @@ export class Game {
 			this._gameStage += 1;
 			this._pot += this._players[0].bet + this._players[1].bet;
 			this._table = this._table.concat(cardsToDeal);
-			this._io.to(this.id).emit('check', {id: id, checkable: false, pot: this._pot, cards: this.stringifyHand(cardsToDeal), dealer: this._players[this._dealer].id, min: 20, max: checkedStack, otherMax: otherStack, playingOn: true});
+			this._io.to(this.id).emit('check', {id: id, checkable: false, pot: this._pot, cards: this.stringifyHand(cardsToDeal), dealer: this._players[this._dealer].id, min: 20, max: checkedStack, otherMax: otherStack, playingOn: (this._gameStage != 5)});
 			this._players[0].bet = 0; //reset bets
 			this._players[1].bet = 0;
 
 			if (this._gameStage == 5) {
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
-				this.interpretResult(this.compareHands(p1Hand, p2Hand));
+				this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, this._players[0]); //0 and player 1 are filler values
 				//show both players' hands
 			}
 		}
