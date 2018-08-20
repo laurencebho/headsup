@@ -5,7 +5,7 @@ var server_1 = require("./src/server");
 var path = require('path');
 var express = require('express');
 var app = express();
-var session = require('express-session');
+var expressSession = require('express-session');
 var http = require('http').Server(app);
 var io = require('socket.io').listen(http);
 var server = new server_1.Server();
@@ -17,12 +17,31 @@ var port = 3000;
 var hostname = '127.0.0.1'; //localhost
 io.on('connection', function (socket) {
     console.log('A user connected');
+    //set session unless already set
+    if (!socket.request.session.socketID) {
+        socket.request.session.socketID = socket.id;
+        socket.request.session.save();
+    }
+    if (socket.request.session.nickname) { //detect a reconnection
+        console.log(socket.request.session.nickname + " has reconnected");
+        io.to(socket.id).emit("connection received", socket.request.session.nickname);
+    }
+    else {
+        io.to(socket.id).emit("connection received");
+    }
     socket.on('disconnect', function () {
         console.log('A user disconnected');
         server.removePlayer(socket.id);
     });
-    socket.on('nickname set', function (nickname) {
-        var newPlayer = new player_1.Player(nickname, socket);
+    socket.on('join queue', function (nickname) {
+        if (nickname) {
+            socket.request.session.nickname = nickname;
+            socket.request.session.save();
+            var newPlayer = new player_1.Player(nickname, socket);
+        }
+        else {
+            var newPlayer = new player_1.Player(socket.request.session.nickname, socket);
+        }
         server.addPlayer(newPlayer);
         console.log('Player created with nickname ' + newPlayer.nickname + ' and ID ' + newPlayer.id);
         server.createGames(io);
@@ -54,7 +73,11 @@ http.listen(port, hostname, function (err) {
 app.use(express.static('public'));
 app.set('view engine', 'pug');
 app.set('views', __dirname + '/views');
-app.use(session({ secret: 'secret', resave: false, saveUninitialized: true, }));
+var session = expressSession({ secret: 'secret', resave: false, saveUninitialized: true });
+io.use(function (socket, next) {
+    session(socket.request, socket.request.res, next);
+});
+app.use(session);
 app.use(expressValidator());
 var home = require('./routes/home.route');
 app.use('/', home);

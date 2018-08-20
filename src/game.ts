@@ -23,7 +23,7 @@ export class Game {
 		p2.socket.join(id);
 		//console.log('room size: ' + io.sockets.adapter.rooms[id].length);
 		if (io.sockets.adapter.rooms[id].length == 2) { //seems to work without a loop
-			io.to(id).emit('game created', [this._players[0].nickname, this._players[1].nickname]);	
+			io.to(id).emit('game created', {names: [this._players[0].nickname, this._players[1].nickname], stacks: [p1.stack, p2.stack]});	
 		}
 		console.log("new game created with id " + id + " and players " + p1.id + ", " + p2.id);
 		this.play();
@@ -154,13 +154,25 @@ export class Game {
 
 	public handleBet(amount : number, id : string) {
 		amount = Number(amount); //convert amount to number
+		console.log("bet amount" + amount);
 		for (var i=0; i<this._players.length; i++) {
 			if (id == this._players[i].id) {
 				this._players[i].bet = amount;
 				var otherBet  = this._players[(i+1)%2].bet;
 				var otherStack = this._players[(i+1)%2].stack;
-				var min = (amount != 20 ? 2 * amount - otherBet : 40); //min raise is 40 for the small blind
-				this._io.to(this.id).emit('bet', {amount: amount, min: min, max: otherStack, pot: this._pot,  id: id});
+				if (amount != 20) {
+					if (2 * amount - otherBet < otherStack) {
+						var min =  2 * amount - otherBet;
+					}
+					else {
+						var min = otherStack;
+					}
+				}
+				else {
+					var min = 40;
+				}
+
+				this._io.to(this.id).emit('bet', {amount: amount, min: min, max: otherStack, pot: this._pot,  id: id, stack: (this._players[i].stack - amount), gameStage: this._gameStage});
 			}
 		}
 	}
@@ -177,6 +189,7 @@ export class Game {
 		var allIn = false;
 		if (a.bet >= b.stack) { //excess allocated to a
 			b.bet = b.stack;
+			var bet = b.bet;
 			var excess = a.stack - b.bet;
 			var excessWinner  = a ;
 			allIn = true;
@@ -184,6 +197,7 @@ export class Game {
 		else if (a.bet == a.stack) { //b stack > a stack. Excess allocated to b
 			if (b.stack > a.stack) {
 				b.bet = a.bet;
+				var bet = b.bet;
 				var excess = b.stack - b.bet;
 				var excessWinner = b;
 			}
@@ -192,6 +206,7 @@ export class Game {
 
 		else {
 			b.bet = a.bet;
+			var bet = a.bet;
 		}
 		for (var i=0; i<this._players.length; i++) { //decrease stacks
 			this._players[i].changeStack(this._players[i].bet * -1);
@@ -205,15 +220,14 @@ export class Game {
 
 		console.log("Game stage: " + this._gameStage);
 		if (this._gameStage == 1 && a.bet == 20) {
-			this._io.to(this.id).emit('call', {amount: a.bet, pot: this._pot, min: 40, max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: true});
+			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, min: 40, max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: true, stack: calledStack});
 		}
 		else {
 			var cardsToDeal = !allIn ? this.getCardsToDeal() : this.getCardsAllIn();
-
 			this._gameStage += 1;
 			this._pot += this._players[0].bet + this._players[1].bet;
 			this._table = this._table.concat(cardsToDeal);
-			this._io.to(this.id).emit('call', {amount: a.bet, pot: this._pot, cards: this.stringifyHand(cardsToDeal), min: 20, max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: false, playingOn : (this._gameStage != 5 && !allIn)}); //amount the same for both players so whose bet does not matter
+			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, cards: this.stringifyHand(cardsToDeal), min: 20, max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: false, playingOn : (this._gameStage != 5 && !allIn), stack: calledStack}); //amount the same for both players so whose bet does not matter
 			this._players[0].bet = 0; //reset bets
 			this._players[1].bet = 0;
 
@@ -236,14 +250,14 @@ export class Game {
 			var i = result - 1;
 			this._players[i].changeStack(this._pot - excess);
 			excessWinner.changeStack(excess);
-			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id});
+			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id, stacks: [this._players[i].stack, this._players[(i+1)%2].stack]});
 		}
 		else {
 			for (var i=0; i<this._players.length; i++) {
 				this._players[i].changeStack((this._pot - excess)/ 2); //award half the pot to each player
 			}
 			excessWinner.changeStack(excess);
-			this._io.to(this.id).emit('result', {result: 'split pot'});
+			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack]}); //id of the player with the first stack in the stacks array
 		}
 		setTimeout(()=> {console.log(this.id); emitter.emit('hand complete' + this.id)}, 6000); //wait 4 seconds before starting new hand
 	}
@@ -257,7 +271,6 @@ export class Game {
 				}
 		}
 			var cardsToDeal = this.getCardsToDeal();
-
 			this._gameStage += 1;
 			this._pot += this._players[0].bet + this._players[1].bet;
 			this._table = this._table.concat(cardsToDeal);
@@ -281,9 +294,10 @@ export class Game {
 		for (var i=0; i<this._players.length; i++) {
 			if (this._players[i].id != id) {
 				this._players[i].changeStack(this._pot);
+				var winnerStack = this._players[i].stack;
 			}
 		}
-		this._io.to(this.id).emit('fold', {pot: this._pot, id: id});
+		this._io.to(this.id).emit('fold', {pot: this._pot, id: id, stack: winnerStack});
 		setTimeout(()=> {emitter.emit('hand complete' + this.id)}, 3000);
 	}
 

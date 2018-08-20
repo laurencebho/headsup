@@ -25,9 +25,33 @@ li:nth-child(odd) {
 }
 
 input {
-	padding: 5px;
-	border-radius: 4px;
+	border-radius: 8px;
+	background-color: #ffffff;
+}
+
+input[type="button"], input[type="submit"], input[type="text"], input[type="number"] {
+	min-height: 40px;
 	border: 1px solid;
+	float: left;
+    padding: 10px 20px;
+    min-width: 50px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    display: inline-block;
+}
+
+input[type="button"], input[type="submit"] {
+    -webkit-transition: .2s;
+    transition:.2s;
+}
+
+input[type="button"]:hover, input[type="submit"]:hover {
+	background-color: #fcf6cf; 
+}
+
+#actions-div {
+	margin-top: 20px;
 }
 
 #nickname-div {
@@ -67,58 +91,16 @@ input {
 }
 
 #chat-box {
-	width: 85%;
+	width: 80%;
 }
 
 #chat-button {
-	width: 15%;
+	width: 20%;
 }
 
 ::-webkit-scrollbar { /* hide scrollbar chrome / safari */
     width: 0px; 
     background: transparent;  
-}
-
-#table-div {
-	float: left;
-	display: inline;
-	width: 70%;
-	height: 90%;
-	border: 1px solid black;
-	border-radius: 4px;
-	position: relative;
-}
-
-#opponent {
-	width: 30%;
-	height: 10%;
-	margin-left: 35%;
-	border: 1px solid black;
-	display: inline-block;
-	border-radius: 4px;
-	position: absolute;
-}
-
-#pot() {
-	width: 20%;
-	height: 5%;
-	margin-left: 40%;
-}
-
-#table-cards {
-	width: 80%;
-	height: 20%;
-	margin-left: 10%;
-	border: 1px solid black;
-	display: inline-block;
-	border-radius: 4px;
-	position: absolute;
-	overflow-x: hidden;
-	overflow-y: auto;
-}
-
-#table-cards > img {
-	height: 90%;
 }
 
 #player {
@@ -131,34 +113,54 @@ input {
 	position: absolute;
 }
 
-.action-div {
-	width: 50%;
-	height: 10%;
-	border: 1px solid black;
-	margin-left: 25%;;
-	display: inline-block;
-	border-radius: 4px;
-	position: absolute;
-}
-
-.action-header {
-	text-align: center;
-}
-
-.controls {
-	float: left;
-}
-
 #slider {
 	float: left;
+	margin-bottom: 15px;
+    -webkit-appearance: none;
+    appearance: none;
+    width: 88%;
+    height: 27px;
+    background: #fcf6cf;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+}
+
+#slider:hover {
+    opacity: 1;
+}
+
+
+#slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background: #dab643;
+    cursor: pointer;
+}
+
+#slider::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    background: #dab643;
+    cursor: pointer;
 }
 
 #slider-val {
+	width: 8%;
 	float: left;
-	padding: 0 10px 0 10px;
+	padding: 0;
 	margin: 0;
+	font-size: 20;
 }
 
 .hole-card {
 	height: 90%;
+}
+
+.controls {
+	margin-right: 15px;
+	margin-top: 10px;
 }
