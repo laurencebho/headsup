@@ -208,8 +208,10 @@ export class Game {
 			b.bet = a.bet;
 			var bet = a.bet;
 		}
-		for (var i=0; i<this._players.length; i++) { //decrease stacks
-			this._players[i].changeStack(this._players[i].bet * -1);
+		if (!(this._gameStage == 1 && a.bet == 20)) { //if not bb call
+			for (var i=0; i<this._players.length; i++) { //decrease stacks
+				this._players[i].changeStack(this._players[i].bet * -1);
+			}
 		}
 		for (var i=0; i<this._players.length; i++) {
 			if (id == this._players[i].id) {
@@ -232,37 +234,48 @@ export class Game {
 			this._players[1].bet = 0;
 
 			if (this._gameStage == 5 || allIn) {
+				var cardsToShow = [];
+				for (var i=0; i<this._players.length; i++) {
+					if (this._players[i].id != id) {
+						cardsToShow = this.stringifyHand(this._players[i].holeCards);
+					}
+				}
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
 				if (allIn) {
-					this.interpretResult(this.compareHands(p1Hand, p2Hand), excess, excessWinner);
+					this.interpretResult(this.compareHands(p1Hand, p2Hand), excess, excessWinner, cardsToShow);
 				}
 				else {
-					this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, a); //filler values 0 and a used
+					this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, a, cardsToShow); //filler values 0 and a used
 				}
 				//show both players' hands
 			}
 		}
 	}
 
-	public interpretResult(result : number, excess? : number, excessWinner? : Player) { //send result and begin new hand
+	public interpretResult(result : number, excess : number, excessWinner : Player, cardsToShow : string[]) { //send result and begin new hand
 		if (result < 3) {
 			var i = result - 1;
 			this._players[i].changeStack(this._pot - excess);
 			excessWinner.changeStack(excess);
-			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id, stacks: [this._players[i].stack, this._players[(i+1)%2].stack]});
+			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id, stacks: [this._players[i].stack, this._players[(i+1)%2].stack], cardsToShow: cardsToShow});
 		}
 		else {
 			for (var i=0; i<this._players.length; i++) {
 				this._players[i].changeStack((this._pot - excess)/ 2); //award half the pot to each player
 			}
 			excessWinner.changeStack(excess);
-			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack]}); //id of the player with the first stack in the stacks array
+			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack], cardsToShow: cardsToShow}); //id of the player with the first stack in the stacks array
 		}
 		setTimeout(()=> {console.log(this.id); emitter.emit('hand complete' + this.id)}, 6000); //wait 4 seconds before starting new hand
 	}
 
 	public handleCheck(id : string) {
+		if (this._gameStage == 1 && this._players[0].bet == 20) {
+			for (var i=0; i<this._players.length; i++) {
+				this._players[i].changeStack(-1 * this._players[i].bet);
+			}
+		}
 		if (id == this._players[this._dealer].id || this._gameStage == 1) { //if the dealer checked or the non-dealer checked after big blind called
 			for (var i=0; i<this._players.length; i++) {
 				if (id == this._players[i].id) {
@@ -279,9 +292,15 @@ export class Game {
 			this._players[1].bet = 0;
 
 			if (this._gameStage == 5) {
+				var cardsToShow = [];
+				for (var i=0; i<this._players.length; i++) {
+					if (this._players[i].id != id) {
+						cardsToShow = this.stringifyHand(this._players[i].holeCards);
+					}
+				}
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
-				this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, this._players[0]); //0 and player 1 are filler values
+				this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, this._players[0], cardsToShow); //0 and player 1 are filler values
 				//show both players' hands
 			}
 		}

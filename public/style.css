@@ -1,7 +1,12 @@
 @import url('https://fonts.googleapis.com/css?family=Lato');
 
+* {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
 body {
-  width: 100%;
   font-family: 'Lato';
 }
 
@@ -52,6 +57,8 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 #actions-div {
 	margin-top: 20px;
+	width: 40%;
+	margin-left: 40%;
 }
 
 #nickname-div {
@@ -75,7 +82,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
 	float: left;
 	height: 60%;
 	width: 20%;
-	margin-right: 5%;
+	margin-left: 5%;
 }
 
 #chat-display-div {

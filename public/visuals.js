@@ -265,7 +265,8 @@ socket.on("result", function(data) {
         }
         else {
             playerStack.text = data.stacks[1];
-            oppStack.text = data.stacks[0]; 
+            oppStack.text = data.stacks[0];
+            flashCards(data.cardsToShow);
         }
     }, 3000);
 });
@@ -315,4 +316,16 @@ function flashText(label, text, actionStyle, duration) {
         label.style = style;
         label.text = label.name;
     }, (duration ? duration : 1500));
+}
+
+function flashCards(cardsToShow) {
+    console.log("flashing cards");
+    for (let i=0; i<cardBacks.children.length; i++) {
+        cardBacks.children[i].texture = resources["cards/" + cardsToShow[i] + ".png"].texture;
+    }
+    window.setTimeout(function() {
+        for (let i=0; i<cardBacks.children.length; i++) {
+            cardBacks.children[i].texture = resources["cards/back.png"].texture;
+        }
+    }, 1500);
 }
