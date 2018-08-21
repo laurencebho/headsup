@@ -121,7 +121,6 @@ export class Game {
 
 	public newHand() {
 		console.log('starting new hand');
-		this._io.to(this.id).emit('new hand');
 		this._deck = []; //initialise deck
 		for (var i=0; i<52; i++) {
 			this._deck.push(i);
@@ -133,6 +132,7 @@ export class Game {
 		}
 		this._gameStage = 1;
 		this._pot = 0;
+		this._io.to(this.id).emit('new hand', this._players[this._dealer].id);
 		this.deal(); //deal new hole cards to players
 
 		this.handleBet(10, this._players[this._dealer].id); //set blinds
@@ -190,16 +190,14 @@ export class Game {
 		if (a.bet >= b.stack) { //excess allocated to a
 			b.bet = b.stack;
 			var bet = b.bet;
-			var excess = a.stack - b.bet;
+			var excess = a.bet - b.bet;
 			var excessWinner  = a ;
 			allIn = true;
 		}
-		else if (a.bet == a.stack) { //b stack > a stack. Excess allocated to b
+		else if (a.bet == a.stack) { //b stack > a stack. no excess
 			if (b.stack > a.stack) {
 				b.bet = a.bet;
 				var bet = b.bet;
-				var excess = b.stack - b.bet;
-				var excessWinner = b;
 			}
 			allIn = true;
 		}
@@ -234,37 +232,47 @@ export class Game {
 			this._players[1].bet = 0;
 
 			if (this._gameStage == 5 || allIn) {
-				var cardsToShow = [];
-				for (var i=0; i<this._players.length; i++) {
-					if (this._players[i].id != id) {
-						cardsToShow = this.stringifyHand(this._players[i].holeCards);
-					}
-				}
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
-				if (allIn) {
-					this.interpretResult(this.compareHands(p1Hand, p2Hand), excess, excessWinner, cardsToShow);
+				var result = this.compareHands(p1Hand, p2Hand);
+				var cardsToShow = {};
+				if (result != 3) {
+					if (this._players[result - 1].id != id) { //if winner to show first
+						cardsToShow[id] = this.stringifyHand(this._players[result - 1].holeCards);
+					}
+					else {
+						cardsToShow[this._players[result - 1].id] = this.stringifyHand(this._players[result % 2].holeCards);
+						cardsToShow[this._players[result % 2].id] = this.stringifyHand(this._players[result - 1].holeCards);
+					}
 				}
 				else {
-					this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, a, cardsToShow); //filler values 0 and a used
+					cardsToShow[this._players[0].id] = this.stringifyHand(this._players[1].holeCards);
+					cardsToShow[this._players[1].id] = this.stringifyHand(this._players[0].holeCards);
 				}
-				//show both players' hands
+				if (excessWinner) {
+					this.interpretResult(result, cardsToShow, excess, excessWinner);
+				}
+
+				else {
+					this.interpretResult(result, cardsToShow);
+				}
 			}
 		}
 	}
 
-	public interpretResult(result : number, excess : number, excessWinner : Player, cardsToShow : string[]) { //send result and begin new hand
+	public interpretResult(result : number, cardsToShow, excess? : number, excessWinner? : Player) { //send result and begin new hand
+		if (excessWinner && excess) {
+			excessWinner.changeStack(excess);
+		}
 		if (result < 3) {
 			var i = result - 1;
-			this._players[i].changeStack(this._pot - excess);
-			excessWinner.changeStack(excess);
+			this._players[i].changeStack(this._pot - (excess ? excess : 0));
 			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id, stacks: [this._players[i].stack, this._players[(i+1)%2].stack], cardsToShow: cardsToShow});
 		}
 		else {
 			for (var i=0; i<this._players.length; i++) {
-				this._players[i].changeStack((this._pot - excess)/ 2); //award half the pot to each player
+				this._players[i].changeStack((this._pot - (excess ? excess : 0))/ 2); //award half the pot to each player
 			}
-			excessWinner.changeStack(excess);
 			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack], cardsToShow: cardsToShow}); //id of the player with the first stack in the stacks array
 		}
 		setTimeout(()=> {console.log(this.id); emitter.emit('hand complete' + this.id)}, 6000); //wait 4 seconds before starting new hand
@@ -300,7 +308,7 @@ export class Game {
 				}
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
-				this.interpretResult(this.compareHands(p1Hand, p2Hand), 0, this._players[0], cardsToShow); //0 and player 1 are filler values
+				this.interpretResult(this.compareHands(p1Hand, p2Hand), cardsToShow);
 				//show both players' hands
 			}
 		}

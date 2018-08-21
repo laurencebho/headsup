@@ -44,17 +44,26 @@ let winStyle = new TextStyle({
   fill: "#8325c4"
 });
 
+let stakeStyle = new TextStyle({
+  fontFamily: ["Basic", "Arial"],
+  fontSize: 20,
+  fill: "#045d2b",
+  fontWeight: "bold"
+});
+
 let betsThisRound = 0;
 
 let tableCards = new Container();
 let holeCards = new Container();
 let cardBacks = new Container();
 let oppStack = new Text("", style);
+let oppStake = new Text("", stakeStyle);
 let opp = new Text("", style);
 let playerStack = new Text("", style);
+let playerStake = new Text("", stakeStyle);
 let player = new Text("", style);
 let pot = new Text("", style);
-
+let dealer = new Sprite();
 let app = new Application({
 width: 1200,
 height: 700,
@@ -119,22 +128,31 @@ loader
 "cards/Kc.png",
 "cards/Kd.png",
 "cards/Ks.png",
-"cards/back.png"
+"cards/back.png",
+"cards/dealer.png"
 ])
 .load(setup);
 
 
 function setup() {
     opp.position.set(app.view.width / 2, 210);
+    oppStake.position.set(app.view.width / 2 - 130, 245);
     oppStack.position.set(app.view.width / 2, 245);
     player.position.set(app.view.width / 2, 620);
+    playerStake.position.set(app.view.width / 2 - 130, app.view.height / 2 + 75);
     playerStack.position.set(app.view.width / 2, 655);
     pot.position.set(app.view.width / 2, app.view.height / 2 + 75);
+    dealer.texture = resources["cards/dealer.png"].texture;
+    //dealer.scale.set(0.6, 0.6);
+    dealer.visible = false;
     app.stage.addChild(opp);
     app.stage.addChild(oppStack);
+    app.stage.addChild(oppStake);
     app.stage.addChild(player);
     app.stage.addChild(playerStack);
+    app.stage.addChild(playerStake);
     app.stage.addChild(pot);
+    app.stage.addChild(dealer);
     for (var i=0; i<2; i++) {
         let card = new Sprite(resources["cards/back.png"].texture);
         card.scale.set(0.4, 0.4);
@@ -157,6 +175,10 @@ socket.on("game created", function() {
     document.body.insertBefore(app.view, document.getElementById("actions-div"));
 });
 
+socket.on("game complete", function() {
+    $("canvas").css("display", "none");
+});
+
 socket.on("hole cards", function(cards) {
     for (let i=0; i<2; i++) {
         let card = new Sprite(resources["cards/" + cards[i] + ".png"].texture);
@@ -173,21 +195,34 @@ socket.on("hole cards", function(cards) {
     cardBacks.visible = true;
 });
 
-socket.on("new hand", function() { //reset everything
+socket.on("new hand", function(id) { //reset everything
     betsThisRound = 0;
     tableCards.removeChildren();
     pot.text = "Pot: 0";
     holeCards.removeChildren();
+    oppStake.text = "";
+    playerStake.text = "";
+    if (socket.id == id) {
+        dealer.position.set(app.view.width / 2 - 45, 620);
+    }
+    else {
+        dealer.position.set(app.view.width / 2 - 45, 210);
+    }
+    if (!dealer.visible) {
+        dealer.visible = true;
+    }
 });
 
 
 socket.on("call", function(data) {
     if (data.id == socket.id) {
         flashText(player, "Call " + data.amount, callStyle);
+        playerStake.text = data.amount;
         playerStack.text = data.stack;
     }
     else {
         flashText(opp, "Call " + data.amount, callStyle);
+        oppStake.text = data.amount;
         oppStack.text = data.stack;
     }
     if (!data.checkable) {
@@ -220,10 +255,12 @@ socket.on("bet", function(data) {
     }
     if (data.id == socket.id) {
         flashText(player, action + data.amount, betStyle);
+        playerStake.text = data.amount;
         playerStack.text = data.stack;
     }
     else {
         flashText(opp, action + data.amount, betStyle);
+        oppStake.text = data.amount;
         oppStack.text = data.stack;
     }
     if (data.amount > 10) {
@@ -233,6 +270,8 @@ socket.on("bet", function(data) {
 
 
 socket.on("fold", function(data) {
+    playerStake.text = "";
+    oppStake.text = "";
     if (data.id == socket.id) {
         flashText(player, "Fold", foldStyle);
         flashText(opp, "Winner", winStyle);
@@ -257,7 +296,7 @@ socket.on("result", function(data) {
         }
         else {
             flashText(opp, "Split Pot", winStyle);
-            flashText(opp, "Split Pot", winStyle);
+            flashText(player, "Split Pot", winStyle);
         }
         if (data.id == socket.id) {
             playerStack.text = data.stacks[0];
@@ -266,8 +305,8 @@ socket.on("result", function(data) {
         else {
             playerStack.text = data.stacks[1];
             oppStack.text = data.stacks[0];
-            flashCards(data.cardsToShow);
         }
+        flashCards(data.cardsToShow[socket.id]);
     }, 3000);
 });
 
@@ -302,6 +341,8 @@ function advanceRound(data) {
     betsThisRound = 0;
     var toPlay = (data.dealer == socket.id ? false : true); //if not the dealer, then plays first
     window.setTimeout(function() { //display call for 2 seconds and then continue game
+        playerStake.text = "";
+        oppStake.text = "";
         if (data.cards) {
             dealCards(data.cards);
         }
@@ -318,14 +359,30 @@ function flashText(label, text, actionStyle, duration) {
     }, (duration ? duration : 1500));
 }
 
-function flashCards(cardsToShow) {
-    console.log("flashing cards");
-    for (let i=0; i<cardBacks.children.length; i++) {
-        cardBacks.children[i].texture = resources["cards/" + cardsToShow[i] + ".png"].texture;
-    }
-    window.setTimeout(function() {
+function flashCards(cards) {
+    if (cards) {
+        console.log("flashing cards");
         for (let i=0; i<cardBacks.children.length; i++) {
-            cardBacks.children[i].texture = resources["cards/back.png"].texture;
+            cardBacks.children[i].texture = resources["cards/" + cards[i] + ".png"].texture;
         }
-    }, 1500);
+        window.setTimeout(function() {
+            for (let i=0; i<cardBacks.children.length; i++) {
+                cardBacks.children[i].texture = resources["cards/back.png"].texture;
+            }
+        }, 1500);
+    }
+
+    else { //opponent mucks cards
+        flashText(opp, "muck", foldStyle);
+        tintContainer(cardBacks, 0x8c918d);
+        window.setTimeout(function() {
+            tintContainer(cardBacks, 0xffffff);
+        }, 1500);
+    }
+}
+
+function tintContainer(cont, colour) {
+    for (let i=0; i<cont.children.length; i++) {
+        cont.children[i].tint = colour;
+    }
 }

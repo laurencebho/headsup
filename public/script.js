@@ -21,8 +21,8 @@ $(function () {
         console.log("nickname: " + nickname);
         if (nickname) {
             socket.nickname = nickname;
-            $("body").append($("<p class='reconnect' style='font-size: 28px; margin: 20% 0 0 40%'>").text("Welcome back " + nickname + "!"));
-            $("body").append("<input class='reconnect' id='reconnect-button' type='button' value='Play' style='margin-left: 40%'>");
+            $("body").append($("<p class='reconnect' style='font-size: 28px; margin: 20% 0 0 40%; float: left'>").text("Welcome back " + nickname + "!"));
+            $("body").append("<input class='reconnect' id='reconnect-button' type='button' value='Play' style='margin: 20% 0 0 10px;'>");
         }
         else {
             $("#nickname-div").css("display", "block");
@@ -40,8 +40,13 @@ $(function () {
             $("#slider-val").attr("min", data.min);
             $("#slider-val").attr("max", data.max);
             if (data.amount > 10) { //if not the small blind
-                $("#bet-button").val("Raise");
-                showButtons(1);
+                if (data.stack == 0 || data.amount >= data.otherStack) { //if an all in, or if bet larger than player's stack, don't allow raise
+                    showButtons(3);
+                }
+                else {
+                    $("#bet-button").val("Raise");
+                    showButtons(1);
+                }
             }
         }
     });
@@ -163,7 +168,7 @@ $(function () {
     socket.on("game complete", function(winnerID) { //on game complete
         $("#chat-div").css("display", "none");
         $("#actions-div").css("display", "none");
-        var message = (socket.id == winnerID ? "You Win!" : "You Lose!");
+        var message = (socket.id == winnerID ? "You won." : "You lost.");
         $("body").append($("<p id='end-message' style='font-size: 36px; margin: 20% 40%'>").text(message));
     })
 
@@ -174,14 +179,18 @@ $(function () {
 
 function hideButtons() {
     $("#slider").attr("disabled", "disabled");
-    //$("#slider").css("display", "none");
+    $("#slider").css("display", "none");
+    $("#slider-val").attr("disabled", "disabled");
+    $("#slider-val").css("display", "none");
     $(".controls").attr("disabled", "disabled");
     $(".controls").css("display", "none");
 }
 
-function showButtons(action) { //1 for responding to bet, 2 for checkable/opening bet
+function showButtons(action) { //1 for responding to bet, 2 for checkable/opening bet, 3 for call/fold only
     $("#slider").removeAttr("disabled");
     $("#slider").css("display", "block");
+    $("#slider-val").removeAttr("disabled");
+    $("#slider-val").css("display", "block");
     if (action == 1) {
         $("#bet-button").removeAttr("disabled");
         $("#bet-button").css("display", "block");
@@ -190,11 +199,17 @@ function showButtons(action) { //1 for responding to bet, 2 for checkable/openin
         $("#fold-button").removeAttr("disabled");
         $("#fold-button").css("display", "block");
     }
-    else {
+    else if (action == 2) {
         $("#bet-button").removeAttr("disabled");
         $("#bet-button").css("display", "block");
         $("#check-button").removeAttr("disabled");
         $("#check-button").css("display", "block");  
+        $("#fold-button").removeAttr("disabled");
+        $("#fold-button").css("display", "block");
+    }
+    else {
+        $("#call-button").removeAttr("disabled");
+        $("#call-button").css("display", "block");  
         $("#fold-button").removeAttr("disabled");
         $("#fold-button").css("display", "block");
     }
