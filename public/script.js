@@ -21,7 +21,7 @@ $(function () {
         console.log("nickname: " + nickname);
         if (nickname) {
             socket.nickname = nickname;
-            $("body").append($("<p class='reconnect' style='font-size: 28px; margin: 20% 0 0 40%; float: left'>").text("Welcome back " + nickname + "!"));
+            $("body").append($("<p class='reconnect' style='font-size: 28px; margin: 20% 0 0 40%; float: left'>").text("Hi " + nickname + "."));
             $("body").append("<input class='reconnect' id='reconnect-button' type='button' value='Play' style='margin: 20% 0 0 10px;'>");
         }
         else {
@@ -39,7 +39,8 @@ $(function () {
             $("#slider").attr("max", data.max);
             $("#slider-val").attr("min", data.min);
             $("#slider-val").attr("max", data.max);
-            if (data.amount > 10) { //if not the small blind
+            if (data.amount > 10 || data.stack == 0) { //if not the small blind
+                console.log("otherStack: " + data.otherStack);
                 if (data.stack == 0 || data.amount >= data.otherStack) { //if an all in, or if bet larger than player's stack, don't allow raise
                     showButtons(3);
                 }
@@ -174,6 +175,17 @@ $(function () {
 
     socket.on("message", function(message) {
         $("#chat").append($("<li>").text(message));
+    });
+
+    socket.on("result", function(data) { //no need for message filter, append message straight to chat
+        window.setTimeout(function() {
+            if (data.result == "single winner") {
+                $("#chat").append($("<li>").text("Dealer: " + data.nickname + " won with " + data.bestHand));
+            }
+            else if (data.result == "split pot") {
+                $("#chat").append($("<li>").text("Dealer: " + data.nicknames[0] + " and " + data.nicknames[1] + " split the pot with " + data.bestHand));
+            }
+        }, 3000);
     });
 });
 

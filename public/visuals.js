@@ -215,13 +215,14 @@ socket.on("new hand", function(id) { //reset everything
 
 
 socket.on("call", function(data) {
+    let action = (data.stack == 0 ? "All In " : "Call ");
     if (data.id == socket.id) {
-        flashText(player, "Call " + data.amount, callStyle);
+        flashText(player, action + data.amount, callStyle);
         playerStake.text = data.amount;
         playerStack.text = data.stack;
     }
     else {
-        flashText(opp, "Call " + data.amount, callStyle);
+        flashText(opp, action + data.amount, callStyle);
         oppStake.text = data.amount;
         oppStack.text = data.stack;
     }
@@ -245,13 +246,15 @@ socket.on("check", function(data) {
 
 
 socket.on("bet", function(data) {
-    let action = "";
     console.log("gameStage: " + data.gameStage)
-    if (data.gameStage == 1 && data.amount <= 20) {
-        action = "Blind ";
+    if (data.stack == 0) {
+        var action = "All In ";
+    }
+    else if (data.gameStage == 1 && data.amount <= 20) {
+        var action = "Blind ";
     }
     else {
-       action = (betsThisRound > 0 ? "Raise " : "Bet "); 
+       var action = (betsThisRound > 0 ? "Raise " : "Bet "); 
     }
     if (data.id == socket.id) {
         flashText(player, action + data.amount, betStyle);

@@ -38,10 +38,8 @@ export class Game {
 	}
 
 	public containsPlayer(id : string) : boolean {
-		console.log('Length of players in game ' + this._players.length);
 		for (var i=0; i<this._players.length ;i++) {
 			if (this._players[i].id === id) {
-				console.log('containsPlayer returning true')
 				return true;
 			}
 
@@ -96,25 +94,24 @@ export class Game {
 		return stringHand;
 	}
 
-	public compareHands(p1Hand : Array<string>, p2Hand : Array<string>) : number {
+	public compareHands(p1Hand : Array<string>, p2Hand : Array<string>) {
 		var p1Eval = pokerEval.evalHand(p1Hand);
 		var p2Eval = pokerEval.evalHand(p2Hand);
-
 		if (p1Eval.handType > p2Eval.handType) {
-			return 1;
+			return {result: 1, hand: p1Eval.handName};
 		}
 		else if (p2Eval.handType > p1Eval.handType) {
-			return 2;
+			return {result: 2, hand: p2Eval.handName};
 		}
 		else { //if the same hand type
 			if (p1Eval.handRank > p2Eval.handRank) {
-				return 1;
+				return {result: 1, hand: p1Eval.handName};
 			}
 			else if (p2Eval.handRank > p1Eval.handRank) {
-				return 2;
+				return {result: 2, hand: p2Eval.handName};
 			}
 			else {
-				return 3; //split pot
+				return {result: 3, hand: p1Eval.handName}; //split pot
 			}
 		}
 	}
@@ -135,8 +132,20 @@ export class Game {
 		this._io.to(this.id).emit('new hand', this._players[this._dealer].id);
 		this.deal(); //deal new hole cards to players
 
-		this.handleBet(10, this._players[this._dealer].id); //set blinds
-		this.handleBet(20, this._players[(this._dealer + 1) % 2].id);
+		var dealer = this._players[this._dealer];
+		var nonDealer = this._players[(this._dealer + 1) % 2];
+		if (dealer.stack > 10) { //post blinds
+			this.handleBet(10, dealer.id);
+			if (nonDealer.stack > 20) {
+				this.handleBet(20, nonDealer.id);
+			}
+			else {
+				this.handleBet(nonDealer.stack, nonDealer.id);
+			}
+		}
+		else {
+			this.handleBet(dealer.stack, dealer.id);
+		}
 	}
 
 	public getRandomCard() : number {
@@ -160,6 +169,7 @@ export class Game {
 				this._players[i].bet = amount;
 				var otherBet  = this._players[(i+1)%2].bet;
 				var otherStack = this._players[(i+1)%2].stack;
+				console.log("otherStack: " + otherStack);
 				if (amount != 20) {
 					if (2 * amount - otherBet < otherStack) {
 						var min =  2 * amount - otherBet;
@@ -172,7 +182,7 @@ export class Game {
 					var min = 40;
 				}
 
-				this._io.to(this.id).emit('bet', {amount: amount, min: min, max: otherStack, pot: this._pot,  id: id, stack: (this._players[i].stack - amount), gameStage: this._gameStage});
+				this._io.to(this.id).emit('bet', {amount: amount, min: min, max: otherStack, pot: this._pot,  id: id, stack: (this._players[i].stack - amount), otherStack: otherStack, gameStage: this._gameStage});
 			}
 		}
 	}
@@ -201,13 +211,13 @@ export class Game {
 			}
 			allIn = true;
 		}
-
 		else {
 			b.bet = a.bet;
 			var bet = a.bet;
 		}
-		if (!(this._gameStage == 1 && a.bet == 20)) { //if not bb call
+		if (!(this._gameStage == 1 && a.bet == 20 && !allIn)) { //if not bb call
 			for (var i=0; i<this._players.length; i++) { //decrease stacks
+				console.log("Player " + i + " stack changed by " + this._players[i].bet * -1);
 				this._players[i].changeStack(this._players[i].bet * -1);
 			}
 		}
@@ -219,61 +229,50 @@ export class Game {
 		}
 
 		console.log("Game stage: " + this._gameStage);
-		if (this._gameStage == 1 && a.bet == 20) {
-			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, min: 40, max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: true, stack: calledStack});
+		if (this._gameStage == 1 && a.bet == 20 && !allIn) {
+			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, min: (otherStack >= 40 ? 40 : otherStack), max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: true, stack: calledStack});
 		}
 		else {
 			var cardsToDeal = !allIn ? this.getCardsToDeal() : this.getCardsAllIn();
 			this._gameStage += 1;
 			this._pot += this._players[0].bet + this._players[1].bet;
 			this._table = this._table.concat(cardsToDeal);
-			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, cards: this.stringifyHand(cardsToDeal), min: 20, max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: false, playingOn : (this._gameStage != 5 && !allIn), stack: calledStack}); //amount the same for both players so whose bet does not matter
+			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, cards: this.stringifyHand(cardsToDeal), min: (this._players[(this._dealer + 1) % 2].stack > 20 ? 20 : this._players[(this._dealer + 1) % 2].stack), max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: false, playingOn : (this._gameStage != 5 && !allIn), stack: calledStack}); //amount the same for both players so whose bet does not matter
 			this._players[0].bet = 0; //reset bets
 			this._players[1].bet = 0;
 
 			if (this._gameStage == 5 || allIn) {
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
-				var result = this.compareHands(p1Hand, p2Hand);
-				var cardsToShow = {};
-				if (result != 3) {
-					if (this._players[result - 1].id != id) { //if winner to show first
-						cardsToShow[id] = this.stringifyHand(this._players[result - 1].holeCards);
-					}
-					else {
-						cardsToShow[this._players[result - 1].id] = this.stringifyHand(this._players[result % 2].holeCards);
-						cardsToShow[this._players[result % 2].id] = this.stringifyHand(this._players[result - 1].holeCards);
-					}
-				}
-				else {
-					cardsToShow[this._players[0].id] = this.stringifyHand(this._players[1].holeCards);
-					cardsToShow[this._players[1].id] = this.stringifyHand(this._players[0].holeCards);
-				}
+				var comparison = this.compareHands(p1Hand, p2Hand);
+				var result = comparison.result;
+				var bestHand = comparison.hand;
+				var cardsToShow = this.getCardsToShow(result, id);
 				if (excessWinner) {
-					this.interpretResult(result, cardsToShow, excess, excessWinner);
+					this.interpretResult(result, bestHand, cardsToShow, excess, excessWinner);
 				}
 
 				else {
-					this.interpretResult(result, cardsToShow);
+					this.interpretResult(result, bestHand, cardsToShow);
 				}
 			}
 		}
 	}
 
-	public interpretResult(result : number, cardsToShow, excess? : number, excessWinner? : Player) { //send result and begin new hand
+	public interpretResult(result : number, bestHand: string, cardsToShow, excess? : number, excessWinner? : Player) { //send result and begin new hand
 		if (excessWinner && excess) {
 			excessWinner.changeStack(excess);
 		}
 		if (result < 3) {
 			var i = result - 1;
 			this._players[i].changeStack(this._pot - (excess ? excess : 0));
-			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id, stacks: [this._players[i].stack, this._players[(i+1)%2].stack], cardsToShow: cardsToShow});
+			this._io.to(this.id).emit('result', {result: 'single winner', id: this._players[i].id, stacks: [this._players[i].stack, this._players[(i+1)%2].stack], cardsToShow: cardsToShow, bestHand: bestHand, nickname: this._players[i].nickname});
 		}
 		else {
 			for (var i=0; i<this._players.length; i++) {
 				this._players[i].changeStack((this._pot - (excess ? excess : 0))/ 2); //award half the pot to each player
 			}
-			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack], cardsToShow: cardsToShow}); //id of the player with the first stack in the stacks array
+			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack], cardsToShow: cardsToShow, bestHand: bestHand, nicknames: [this._players[0].nickname, this._players[1].nickname]}); //id of the player with the first stack in the stacks array
 		}
 		setTimeout(()=> {console.log(this.id); emitter.emit('hand complete' + this.id)}, 6000); //wait 4 seconds before starting new hand
 	}
@@ -290,26 +289,23 @@ export class Game {
 					var otherStack = this._players[(i+1)%2].stack;
 					var checkedStack = this._players[i].stack;
 				}
-		}
+			}
 			var cardsToDeal = this.getCardsToDeal();
 			this._gameStage += 1;
 			this._pot += this._players[0].bet + this._players[1].bet;
 			this._table = this._table.concat(cardsToDeal);
-			this._io.to(this.id).emit('check', {id: id, checkable: false, pot: this._pot, cards: this.stringifyHand(cardsToDeal), dealer: this._players[this._dealer].id, min: 20, max: checkedStack, otherMax: otherStack, playingOn: (this._gameStage != 5)});
+			this._io.to(this.id).emit('check', {id: id, checkable: false, pot: this._pot, cards: this.stringifyHand(cardsToDeal), dealer: this._players[this._dealer].id, min: (this._players[(this._dealer + 1) % 2].stack > 20 ? 20 : this._players[(this._dealer + 1) % 2].stack), max: checkedStack, otherMax: otherStack, playingOn: (this._gameStage != 5)});
 			this._players[0].bet = 0; //reset bets
 			this._players[1].bet = 0;
 
 			if (this._gameStage == 5) {
-				var cardsToShow = [];
-				for (var i=0; i<this._players.length; i++) {
-					if (this._players[i].id != id) {
-						cardsToShow = this.stringifyHand(this._players[i].holeCards);
-					}
-				}
 				var p1Hand = this.stringifyHand(this._players[0].holeCards.concat(this._table));
 				var p2Hand = this.stringifyHand(this._players[1].holeCards.concat(this._table));
-				this.interpretResult(this.compareHands(p1Hand, p2Hand), cardsToShow);
-				//show both players' hands
+				var comparison = this.compareHands(p1Hand, p2Hand);
+				var result = comparison.result;
+				var bestHand = comparison.hand;
+				var cardsToShow = this.getCardsToShow(result, id);
+				this.interpretResult(comparison.result, comparison.hand, cardsToShow);
 			}
 		}
 		else {
@@ -391,5 +387,23 @@ export class Game {
 
 		}
 		return cardsToDeal;
+	}
+
+	public getCardsToShow(result: number, id : string) {
+		var cardsToShow = {};
+		if (result != 3) {
+			if (this._players[result - 1].id != id) { //if winner to show first
+				cardsToShow[id] = this.stringifyHand(this._players[result - 1].holeCards);
+			}
+			else {
+				cardsToShow[this._players[result - 1].id] = this.stringifyHand(this._players[result % 2].holeCards);
+				cardsToShow[this._players[result % 2].id] = this.stringifyHand(this._players[result - 1].holeCards);
+			}
+		}
+		else {
+			cardsToShow[this._players[0].id] = this.stringifyHand(this._players[1].holeCards);
+			cardsToShow[this._players[1].id] = this.stringifyHand(this._players[0].holeCards);
+		}
+		return cardsToShow;
 	}
 }
