@@ -21,7 +21,6 @@ export class Game {
 		this._id = id;
 		p1.socket.join(id); //join the game's chat room
 		p2.socket.join(id);
-		//console.log('room size: ' + io.sockets.adapter.rooms[id].length);
 		if (io.sockets.adapter.rooms[id].length == 2) { //seems to work without a loop
 			io.to(id).emit('game created', {names: [this._players[0].nickname, this._players[1].nickname], stacks: [p1.stack, p2.stack]});	
 		}
@@ -41,10 +40,6 @@ export class Game {
 		for (var i=0; i<this._players.length ;i++) {
 			if (this._players[i].id === id) {
 				return true;
-			}
-
-			else {
-				console.log('search ID ' + id + ' does not match current ID ' + this._players[i].id);
 			}
 		}
 		return false;
@@ -88,7 +83,6 @@ export class Game {
 			else {
 				card += "h";
 			}
-			console.log(hand[i] + " stringified to " + card); //for checking
 			stringHand.push(card);
 		}
 		return stringHand;
@@ -134,18 +128,20 @@ export class Game {
 
 		var dealer = this._players[this._dealer];
 		var nonDealer = this._players[(this._dealer + 1) % 2];
-		if (dealer.stack > 10) { //post blinds
-			this.handleBet(10, dealer.id);
-			if (nonDealer.stack > 20) {
-				this.handleBet(20, nonDealer.id);
+		setTimeout(()=> {
+			if (dealer.stack > 10) { //post blinds
+				this.handleBet(10, dealer.id);
+				if (nonDealer.stack > 20) {
+					this.handleBet(20, nonDealer.id);
+				}
+				else {
+					this.handleBet(nonDealer.stack, nonDealer.id);
+				}
 			}
 			else {
-				this.handleBet(nonDealer.stack, nonDealer.id);
+				this.handleBet(dealer.stack, dealer.id);
 			}
-		}
-		else {
-			this.handleBet(dealer.stack, dealer.id);
-		}
+		}, 1000);
 	}
 
 	public getRandomCard() : number {
@@ -181,7 +177,6 @@ export class Game {
 				else {
 					var min = 40;
 				}
-
 				this._io.to(this.id).emit('bet', {amount: amount, min: min, max: otherStack, pot: this._pot,  id: id, stack: (this._players[i].stack - amount), otherStack: otherStack, gameStage: this._gameStage});
 			}
 		}
@@ -215,11 +210,9 @@ export class Game {
 			b.bet = a.bet;
 			var bet = a.bet;
 		}
-		if (!(this._gameStage == 1 && a.bet == 20 && !allIn)) { //if not bb call
-			for (var i=0; i<this._players.length; i++) { //decrease stacks
-				console.log("Player " + i + " stack changed by " + this._players[i].bet * -1);
-				this._players[i].changeStack(this._players[i].bet * -1);
-			}
+		for (var i=0; i<this._players.length; i++) { //decrease stacks
+			console.log("Player " + i + " stack changed by " + this._players[i].bet * -1);
+			this._players[i].changeStack(this._players[i].bet * -1);
 		}
 		for (var i=0; i<this._players.length; i++) {
 			if (id == this._players[i].id) {
@@ -274,15 +267,10 @@ export class Game {
 			}
 			this._io.to(this.id).emit('result', {result: 'split pot', id: this._players[0].id, stacks: [this._players[0].stack, this._players[1].stack], cardsToShow: cardsToShow, bestHand: bestHand, nicknames: [this._players[0].nickname, this._players[1].nickname]}); //id of the player with the first stack in the stacks array
 		}
-		setTimeout(()=> {console.log(this.id); emitter.emit('hand complete' + this.id)}, 6000); //wait 4 seconds before starting new hand
+		setTimeout(()=> {console.log(this.id); emitter.emit('hand complete' + this.id)}, 8000); //wait before starting new hand
 	}
 
 	public handleCheck(id : string) {
-		if (this._gameStage == 1 && this._players[0].bet == 20) {
-			for (var i=0; i<this._players.length; i++) {
-				this._players[i].changeStack(-1 * this._players[i].bet);
-			}
-		}
 		if (id == this._players[this._dealer].id || this._gameStage == 1) { //if the dealer checked or the non-dealer checked after big blind called
 			for (var i=0; i<this._players.length; i++) {
 				if (id == this._players[i].id) {
@@ -314,14 +302,17 @@ export class Game {
 	}
 
 	public handleFold(id: string) {
-		for (var i=0; i<this._players.length; i++) {
+		for (var i=0; i<2; i++) {
 			if (this._players[i].id != id) {
 				this._players[i].changeStack(this._pot);
+				this._players[i].changeStack(this._players[(i + 1) % 2].bet); //for any bets haven't been added to pot
+				this._players[(i + 1) % 2].changeStack(this._players[(i + 1) % 2].bet * -1);
 				var winnerStack = this._players[i].stack;
 			}
 		}
-		this._io.to(this.id).emit('fold', {pot: this._pot, id: id, stack: winnerStack});
-		setTimeout(()=> {emitter.emit('hand complete' + this.id)}, 3000);
+		this._pot += this._players[0].bet + this._players[1].bet;
+		this._io.to(this.id).emit('fold', {pot: this._pot, id: id, winnerStack: winnerStack});
+		setTimeout(()=> {emitter.emit('hand complete' + this.id)}, 8000);
 	}
 
 	public play() { //add event to emit cards, add max and min bets for slider, evaluate hand, play entire game
@@ -353,9 +344,22 @@ export class Game {
 			}
 			else {
 				var winnerID = (this._players[0].stack == 0 ? this._players[1].id : this._players[0].id);
-				this._io.to(this.id).emit("game complete", winnerID);
+				this._io.to(this.id).emit('game complete', winnerID);
+				this.removeEmitterListeners();
+				emitter.emit('game complete', this.id);
 			}
 		});
+
+		emitter.on('disconnect' + this.id, (id)=> {
+			console.log(id + " disconnected");
+			for (var i=0; i<this._players.length; i++) {
+				if (this._players[i].id != id) {
+					this._io.to(this._players[i].id).emit('other player disconnected');
+				}
+			}
+			this.removeEmitterListeners();
+			emitter.emit('game complete', this.id);
+		}); 
 	}
 
 	public getCardsToDeal() : number[] {
@@ -405,5 +409,12 @@ export class Game {
 			cardsToShow[this._players[1].id] = this.stringifyHand(this._players[0].holeCards);
 		}
 		return cardsToShow;
+	}
+
+	public removeEmitterListeners() {
+		var gameEvents = ['call', 'check', 'fold', 'bet', 'hand complete', 'disconnect'];
+		for (var i=0; i<gameEvents.length; i++) {
+			emitter.removeAllListeners(gameEvents[i] + this.id);
+		}
 	}
 }

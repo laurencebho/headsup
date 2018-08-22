@@ -34,6 +34,10 @@ io.on('connection', (socket) => {
   }
   socket.on('disconnect', function(){
     console.log('A user disconnected');
+    let room = server.getRoom(socket.id);
+    if (room != 'none') {
+      eventEmitter.emit('disconnect' + room, socket.id);
+    }
     server.removePlayer(socket.id);
   });
   socket.on('join queue', function(nickname) { //not done yet
@@ -65,6 +69,9 @@ io.on('connection', (socket) => {
   });
   socket.on('fold', function(id) {
   	eventEmitter.emit('fold' + server.getRoom(id), id);
+  });
+  eventEmitter.on('game complete', function(id) {
+    server.removeGame(id);
   });
 });
 

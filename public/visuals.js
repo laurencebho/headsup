@@ -51,6 +51,13 @@ let stakeStyle = new TextStyle({
   fontWeight: "bold"
 });
 
+let checkAudio = new Audio("sounds/check.mp3");
+let betAudio = new Audio("sounds/bet.mp3");
+let foldAudio = new Audio("sounds/fold.mp3");
+let dealAudio = new Audio("sounds/deal.mp3");
+let potAudio = new Audio("sounds/updatepot.mp3");
+let winAudio = new Audio("sounds/win.mp3");
+
 let betsThisRound = 0;
 
 let tableCards = new Container();
@@ -179,6 +186,10 @@ socket.on("game complete", function() {
     $("canvas").css("display", "none");
 });
 
+socket.on("other player disconnected", function() {
+    $("canvas").css("display", "none");
+});
+
 socket.on("hole cards", function(cards) {
     for (let i=0; i<2; i++) {
         let card = new Sprite(resources["cards/" + cards[i] + ".png"].texture);
@@ -216,6 +227,7 @@ socket.on("new hand", function(id) { //reset everything
 
 socket.on("call", function(data) {
     let action = (data.stack == 0 ? "All In " : "Call ");
+    betAudio.play();
     if (data.id == socket.id) {
         flashText(player, action + data.amount, callStyle);
         playerStake.text = data.amount;
@@ -233,6 +245,7 @@ socket.on("call", function(data) {
 
 
 socket.on("check", function(data) {
+    checkAudio.play();
     if (data.id == socket.id) {
         flashText(player, "Check", checkStyle);
     }
@@ -256,6 +269,7 @@ socket.on("bet", function(data) {
     else {
        var action = (betsThisRound > 0 ? "Raise " : "Bet "); 
     }
+    betAudio.play();
     if (data.id == socket.id) {
         flashText(player, action + data.amount, betStyle);
         playerStake.text = data.amount;
@@ -275,20 +289,35 @@ socket.on("bet", function(data) {
 socket.on("fold", function(data) {
     playerStake.text = "";
     oppStake.text = "";
+    window.setTimeout(()=>{
+        potAudio.play();
+        pot.text = "Pot: " + data.pot
+    }, 2000);
     if (data.id == socket.id) {
+        foldAudio.play();
         flashText(player, "Fold", foldStyle);
-        flashText(opp, "Winner", winStyle);
-        oppStack.text = data.winnerStack;
+        window.setTimeout(()=>{flashText(opp, "Winner", winStyle)}, 4000);
+        window.setTimeout(()=>{
+            winAudio.play();
+            oppStack.text = data.winnerStack;
+            pot.text = "Pot: 0";
+        }, 6000);
     }
     else {
         flashText(opp, "Fold", foldStyle);
-        flashText(player, "Winner", winStyle);
+        window.setTimeout(()=>{flashText(player, "Winner", winStyle)}, 4000);
+        window.setTimeout(()=>{
+            winAudio.play();
+            stack.text = data.winnerStack;
+            pot.text = "Pot: 0";
+        }, 6000);
     }
-    $("#pot-header").text = "Pot" + data.pot;
+    
 });
 
 socket.on("result", function(data) {
     window.setTimeout(()=>{
+        flashCards(data.cardsToShow[socket.id]);
         if (data.result == "single winner") {
             if(data.id == socket.id) {
                 flashText(player, "Winner", winStyle);   
@@ -301,18 +330,22 @@ socket.on("result", function(data) {
             flashText(opp, "Split Pot", winStyle);
             flashText(player, "Split Pot", winStyle);
         }
+    }, 4000);
+    window.setTimeout(()=>{
+        winAudio.play();
         if (data.id == socket.id) {
             playerStack.text = data.stacks[0];
             oppStack.text = data.stacks[1];
+            pot.text = "Pot: 0";
         }
         else {
             playerStack.text = data.stacks[1];
             oppStack.text = data.stacks[0];
+            pot.text = "Pot: 0";
         }
-        flashCards(data.cardsToShow[socket.id]);
-    }, 3000);
+    }, 6000);
+    
 });
-
 
 socket.on("game created", function(data) {
     for (var i=0; i<data.names.length; i++) {
@@ -342,23 +375,28 @@ function dealCards(cards) {
 
 function advanceRound(data) {
     betsThisRound = 0;
-    var toPlay = (data.dealer == socket.id ? false : true); //if not the dealer, then plays first
-    window.setTimeout(function() { //display call for 2 seconds and then continue game
+    window.setTimeout(function() {
         playerStake.text = "";
         oppStake.text = "";
-        if (data.cards) {
-            dealCards(data.cards);
-        }
+        potAudio.play();
         pot.text = "Pot: " + data.pot;
     }, 2000);
+    window.setTimeout(function() {
+        if (data.cards) {
+            dealAudio.play()
+            dealCards(data.cards);
+        }
+    }, 4000);
 }
 
 function flashText(label, text, actionStyle, duration) {
     label.style = actionStyle;
     label.text = text;
     window.setTimeout(function() {
-        label.style = style;
-        label.text = label.name;
+        if (label.text == text) { //only reset text and style if it hasn't been changed again in the 1.5s interval
+            label.style = style;
+            label.text = label.name;
+        }
     }, (duration ? duration : 1500));
 }
 

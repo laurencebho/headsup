@@ -62,19 +62,19 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 #nickname-div {
-	margin: 20% 40% auto 40%;
+	margin: 20% 40%;
 }
 
 #nickname-box {
-	width: 85%;
+	width: 80%;
 }
 
 #nickname-button {
-	width: 15%;
+	width: 20%;
 }
 
 #waiting-header {
-	font-size: 36px;
+	font-size: 28px;
 	margin: 20% 40%;
 }
 

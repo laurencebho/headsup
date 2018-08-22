@@ -117,6 +117,10 @@ $(function () {
         $("#waiting-div").css("display", "block");
     });
 
+    $("body").on("click", ".home-button", function() {
+        location.reload(); //refresh page
+    })
+
     $("#chat-form").submit(function() {
         if ($("#chat-box").val() != "") {
             socket.emit("message", {msg: socket.nickname + ": " + $("#chat-box").val(), id: socket.id});
@@ -170,7 +174,8 @@ $(function () {
         $("#chat-div").css("display", "none");
         $("#actions-div").css("display", "none");
         var message = (socket.id == winnerID ? "You won." : "You lost.");
-        $("body").append($("<p id='end-message' style='font-size: 36px; margin: 20% 40%'>").text(message));
+        $("body").append($("<p id='end-message' style='font-size: 28px; margin: 20% 0 0 40%; float: left;'>").text(message));
+        $("body").append($("<input type='button' class='home-button' value='Home' style='margin: 20% 40% 0 10px;'>"));
     })
 
     socket.on("message", function(message) {
@@ -180,12 +185,20 @@ $(function () {
     socket.on("result", function(data) { //no need for message filter, append message straight to chat
         window.setTimeout(function() {
             if (data.result == "single winner") {
-                $("#chat").append($("<li>").text("Dealer: " + data.nickname + " won with " + data.bestHand));
+                $("#chat").append($("<li>").text("Dealer: " + data.nickname + " wins with " + data.bestHand));
             }
             else if (data.result == "split pot") {
                 $("#chat").append($("<li>").text("Dealer: " + data.nicknames[0] + " and " + data.nicknames[1] + " split the pot with " + data.bestHand));
             }
-        }, 3000);
+        }, 4000);
+    });
+
+    socket.on("other player disconnected", function() {
+        $("#chat-div").css("display", "none");
+        $("#actions-div").css("display", "none");
+        var message = ("Your opponent disconnected.");
+        $("body").append($("<p id='dc-message' style='font-size: 28px; margin: 20% 0 0 40%; float: left;'>").text(message));
+        $("body").append($("<input type='button' class='home-button' value='Home' style='margin: 20% 0 0 10px;'>"));
     });
 });
 
@@ -234,5 +247,5 @@ function nextRound(data) {
         if (toPlay && data.playingOn) {
             showButtons(2);
         }
-    }, 2000);
+    }, 4000);
 }
