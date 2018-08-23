@@ -62,7 +62,18 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 #nickname-div {
-	margin: 20% 40%;
+	margin: 20% 37%;
+	width: 26%;
+	position: absolute;
+}
+#nickname-container {
+	position: relative;
+}
+#nickname-error {
+	margin: 17% 30%;	
+	text-align: center;
+	width: 40%;
+	position: absolute;
 }
 
 #nickname-box {
@@ -70,7 +81,8 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 #nickname-button {
-	width: 20%;
+	width: 18%;
+	margin-left: 5px
 }
 
 #waiting-header {
@@ -80,14 +92,13 @@ input[type="button"]:hover, input[type="submit"]:hover {
 
 #chat-div {
 	float: left;
-	height: 60%;
 	width: 20%;
 	margin-left: 5%;
 }
 
 #chat-display-div {
 	width: 100%;
-	height: 100%;
+	height: 720px;
 	overflow-x: hidden;
 	overflow-y: auto;
 	margin-top: 10%;
@@ -98,6 +109,7 @@ input[type="button"]:hover, input[type="submit"]:hover {
 }
 
 #chat-box {
+	margin-top: 10px;
 	width: 100%;
 }
 

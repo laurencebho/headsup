@@ -304,6 +304,7 @@ socket.on("fold", function(data) {
         }, 6000);
     }
     else {
+        foldAudio.play();
         flashText(opp, "Fold", foldStyle);
         window.setTimeout(()=>{flashText(player, "Winner", winStyle)}, 4000);
         window.setTimeout(()=>{
@@ -378,8 +379,10 @@ function advanceRound(data) {
     window.setTimeout(function() {
         playerStake.text = "";
         oppStake.text = "";
-        potAudio.play();
-        pot.text = "Pot: " + data.pot;
+        if (pot.text != "Pot: " + data.pot) { //if pot hasn't changed (double check) then don't play audio
+            potAudio.play();
+            pot.text = "Pot: " + data.pot;
+        }
     }, 2000);
     window.setTimeout(function() {
         if (data.cards) {

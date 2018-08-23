@@ -2,10 +2,12 @@ head
   link(rel='stylesheet' href='style.css')
   link(rel='icon' href='favicon.ico' type='image/x-icon')
   title Heads Up
-div(id='nickname-div' class='container' style='display: none')
-  form(id='nickname-form' action='')
-    input(id='nickname-box' type='text' placeholder='Enter Nickname' autocomplete="off")
-    input(id='nickname-button' type='submit' value='Go')
+div(id='nickname-container')
+  div(id='nickname-error')
+  div(id='nickname-div' class='container' style='display: none')
+    form(id='nickname-form' action='')
+      input(id='nickname-box' type='text' placeholder='Enter Nickname' maxlength=15 autocomplete="off")
+      input(id='nickname-button' type='submit' value='Go')
 div(id='waiting-div' style='display: none')
   p(id='waiting-header') Searching for a game...
 div(id='chat-div' class='container' style='display: none')

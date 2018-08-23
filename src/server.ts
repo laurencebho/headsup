@@ -63,4 +63,13 @@ export class Server {
 		};
 		return 'none';
 	}
+
+	public nicknameExists(nickname : string): boolean {
+		for (var i=0; i<this._players.length; i++) {
+			if (this._players[i].nickname == nickname) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

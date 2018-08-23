@@ -36,8 +36,10 @@ $(function () {
     socket.on("bet", function(data) {
         if (data.id != socket.id) {
             $("#slider").attr("min", data.min);
+            $("#slider").val(data.min);
             $("#slider").attr("max", data.max);
             $("#slider-val").attr("min", data.min);
+            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.max);
             if (data.amount > 10 || data.stack == 0) { //if not the small blind
                 console.log("otherStack: " + data.otherStack);
@@ -55,14 +57,18 @@ $(function () {
     socket.on("call", function(data) {
         if (data.id == socket.id) {
             $("#slider").attr("min", data.min);
+            $("#slider").val(data.min);
             $("#slider").attr("max", data.max);
             $("#slider-val").attr("min", data.min);
+            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.max);
         }
         else {
             $("#slider").attr("min", data.min);
+            $("#slider").val(data.min);
             $("#slider").attr("max", data.otherMax);
             $("#slider-val").attr("min", data.min);
+            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.otherMax);
             if (data.checkable) {
                 $("#bet-button").val("Raise");
@@ -77,8 +83,10 @@ $(function () {
     socket.on("check", function(data) {
         if (data.id == socket.id) {
             $("#slider").attr("min", data.min);
+            $("#slider").val(data.min);
             $("#slider").attr("max", data.max);
             $("#slider-val").attr("min", data.min);
+            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.max);
             if (!data.checkable) {
                 nextRound(data);
@@ -86,8 +94,10 @@ $(function () {
         }
         else {
             $("#slider").attr("min", data.min);
+            $("#slider").val(data.min);
             $("#slider").attr("max", data.otherMax);
             $("#slider-val").attr("min", data.min);
+            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.otherMax);
             if (!data.checkable) {
                 nextRound(data);
@@ -101,12 +111,11 @@ $(function () {
     $("#nickname-form").submit(function() {
         var nickname = $("#nickname-box").val();
         if (nickname != "") {
-            socket.nickname = nickname;
+            //socket.nickname = nickname;
             socket.emit("join queue", nickname);
+            $("#nickname-error").empty();
             $("#nickname-box").val("");
         }
-        $("#nickname-div").css("display", "none");
-        $("#waiting-div").css("display", "block");
         return false; //prevent page reloading
     });
 
@@ -114,7 +123,19 @@ $(function () {
         console.log("reconnect button clicked, nickname: " + socket.nickname);
         $(".reconnect").remove();
         socket.emit("join queue");
+    });
+
+    socket.on("queue joined", function(name) {
+        if (name) {
+            socket.nickname = name;
+        }
+        $("#nickname-div").css("display", "none");
         $("#waiting-div").css("display", "block");
+    });
+
+    socket.on("nickname error", function(msg) {
+        console.log("Error with nickname");
+        $("<p style='color:#dc0011; font-size:16px;'>").text(msg).hide().appendTo("#nickname-error").fadeIn(200);
     });
 
     $("body").on("click", ".home-button", function() {
@@ -123,8 +144,8 @@ $(function () {
 
     $("#chat-form").submit(function() {
         if ($("#chat-box").val() != "") {
-            socket.emit("message", {msg: socket.nickname + ": " + $("#chat-box").val(), id: socket.id});
-            console.log('message sent');
+            socket.emit("message", {message: $("#chat-box").val(), id: socket.id, nickname: socket.nickname});
+            console.log('message:' + $("#chat-box").val() + "//");
         $("#chat-box").val("");
         }
         return false;
@@ -178,8 +199,13 @@ $(function () {
         $("body").append($("<input type='button' class='home-button' value='Home' style='margin: 20% 40% 0 10px;'>"));
     })
 
-    socket.on("message", function(message) {
-        $("#chat").append($("<li>").text(message));
+    socket.on("message", function(data) {
+        if (!data.error) {
+            $("#chat").append($("<li>").text(data.message));
+        }
+        else {
+            $("#chat").append($("<li style='color: #dc0011'>").text(data.message));
+        }
     });
 
     socket.on("result", function(data) { //no need for message filter, append message straight to chat

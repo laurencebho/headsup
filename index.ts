@@ -32,7 +32,7 @@ io.on('connection', (socket) => {
   else {
     io.to(socket.id).emit("connection received");
   }
-  socket.on('disconnect', function(){
+  socket.on('disconnect', function() {
     console.log('A user disconnected');
     let room = server.getRoom(socket.id);
     if (room != 'none') {
@@ -41,21 +41,42 @@ io.on('connection', (socket) => {
     server.removePlayer(socket.id);
   });
   socket.on('join queue', function(nickname) { //not done yet
+    let valid = true;
+    let validationMessage = validateNickname(nickname);
     if (nickname) {
-      socket.request.session.nickname = nickname;
-      socket.request.session.save();
-  	  var newPlayer = new Player(nickname, socket);
+      if (validationMessage === 'valid') {
+        socket.request.session.nickname = nickname;
+        socket.request.session.save();
+    	  var newPlayer = new Player(nickname, socket);
+      }
+      else {
+        valid = false;
+        socket.emit('nickname error', validationMessage);
+      }
     }
     else {
       var newPlayer = new Player(socket.request.session.nickname, socket);
     }
-  	server.addPlayer(newPlayer);
-  	console.log('Player created with nickname ' + newPlayer.nickname + ' and ID ' + newPlayer.id);
-  	server.createGames(io);
+    if (valid) {
+      if (nickname) {
+        socket.emit('queue joined', nickname);
+      }
+      else {
+        socket.emit('queue joined');
+      }
+    	server.addPlayer(newPlayer);
+    	console.log('Player created with nickname ' + newPlayer.nickname + ' and ID ' + newPlayer.id);
+    	server.createGames(io);
+    }
   });
   socket.on('message', function(data) {
-  	console.log('sending message to ' + server.getRoom(data.id));
-  	io.to(server.getRoom(data.id)).emit('message', data.msg); //send message to the room containing the sender
+    let validationMessage = validateMessage(data.message);
+    if (validationMessage === 'valid') {
+  	  io.to(server.getRoom(data.id)).emit('message', {message: data.nickname + ": " + data.message, error: false}); //send message to the room containing the sender
+    }
+    else {
+      socket.emit('message', {message: validationMessage, error: true}); //send message to the room containing the sender
+    }
   });
   socket.on('bet', function(data) {
   	console.log('bet' + server.getRoom(data.id));
@@ -70,9 +91,10 @@ io.on('connection', (socket) => {
   socket.on('fold', function(id) {
   	eventEmitter.emit('fold' + server.getRoom(id), id);
   });
-  eventEmitter.on('game complete', function(id) {
-    server.removeGame(id);
-  });
+});
+
+eventEmitter.on('game complete', function(id) {
+  server.removeGame(id);
 });
 
 http.listen(port, hostname, (err) => {
@@ -96,3 +118,32 @@ app.use(expressValidator());
 
 var home = require('./routes/home.route');
 app.use('/', home);
+
+function validateNickname(nickname : string) : string {
+  var valid = /^[\w]{3,}$/;
+  if (!valid.test(nickname)) {
+    return "Nickname invalid - must be 3-15 characters alphanumeric";
+  }
+  else if (server.nicknameExists(nickname)) {
+    return "Sorry, a player with that nickname already exists";
+  }
+  else {
+    return "valid";
+  }
+}
+
+function validateMessage(message: string) : string {
+  var noSpecialChars = /^[\w\s,!?.;:'-]*$/;
+  if (!noSpecialChars.test(message)) {
+    return "Please don't use special characters in messages";
+  }
+  else {
+    var noSpaceStart = /^[^\s].*$/;
+    if (!noSpaceStart.test(message)) {
+      return "Please don't start messages with whitespace";
+    }
+    else {
+      return "valid";
+    }
+  }
+}
