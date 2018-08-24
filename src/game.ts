@@ -241,13 +241,15 @@ export class Game {
 				var result = comparison.result;
 				var bestHand = comparison.hand;
 				var cardsToShow = this.getCardsToShow(result, id);
-				if (excessWinner) {
-					this.interpretResult(result, bestHand, cardsToShow, excess, excessWinner);
-				}
+				setTimeout(()=> {
+					if (excessWinner) {
+						this.interpretResult(result, bestHand, cardsToShow, excess, excessWinner);
+					}
 
-				else {
-					this.interpretResult(result, bestHand, cardsToShow);
-				}
+					else {
+						this.interpretResult(result, bestHand, cardsToShow);
+					}
+				}, (cardsToDeal.length > 0 ? 2000 : 0)); //allow an extra 2 seconds before emitting result if cards need to be dealt
 			}
 		}
 	}

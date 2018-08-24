@@ -15,8 +15,8 @@ export var eventEmitter = new EventEmitter();
 var pug = require('pug');
 var expressValidator =  require('express-validator'); //can remove
 
-var port = 3000;
-var hostname = '127.0.0.1'; //localhost
+var port = 8080;
+//var hostname = '127.0.0.1';
 
 io.on('connection', (socket) => {
   console.log('A user connected');
@@ -27,10 +27,10 @@ io.on('connection', (socket) => {
   }
   if (socket.request.session.nickname) { //detect a reconnection
     console.log(socket.request.session.nickname + " has reconnected");
-    io.to(socket.id).emit("connection received", socket.request.session.nickname);
+    socket.emit("connection received", socket.request.session.nickname);
   }
   else {
-    io.to(socket.id).emit("connection received");
+    socket.emit("connection received");
   }
   socket.on('disconnect', function() {
     console.log('A user disconnected');
@@ -42,20 +42,20 @@ io.on('connection', (socket) => {
   });
   socket.on('join queue', function(nickname) { //not done yet
     let valid = true;
-    let validationMessage = validateNickname(nickname);
-    if (nickname) {
-      if (validationMessage === 'valid') {
+    let validationMessage = validateNickname((nickname ? nickname : socket.request.session.nickname));
+    if (validationMessage === 'valid') {
+      if (nickname) {
         socket.request.session.nickname = nickname;
         socket.request.session.save();
     	  var newPlayer = new Player(nickname, socket);
       }
       else {
-        valid = false;
-        socket.emit('nickname error', validationMessage);
+        var newPlayer = new Player(socket.request.session.nickname, socket);
       }
     }
     else {
-      var newPlayer = new Player(socket.request.session.nickname, socket);
+      valid = false;
+      socket.emit('nickname error', validationMessage);
     }
     if (valid) {
       if (nickname) {
@@ -97,7 +97,7 @@ eventEmitter.on('game complete', function(id) {
   server.removeGame(id);
 });
 
-http.listen(port, hostname, (err) => {
+http.listen(port, (err) => {
   if (err) {
     return console.log(err);
   }

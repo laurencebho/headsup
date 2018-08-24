@@ -1,6 +1,7 @@
 var socket = io();
 
 $(function () {
+    console.log("dimensions: (" + $(window).width() + ", " + $(window).height() + ")");
     socket.on("connect", function() {
         if ($("#nickname-div").css("display") === "block") { //on page refresh hide everything
                 $("#nickname-div").css("display", "none");
@@ -83,23 +84,23 @@ $(function () {
     socket.on("check", function(data) {
         if (data.id == socket.id) {
             $("#slider").attr("min", data.min);
-            $("#slider").val(data.min);
             $("#slider").attr("max", data.max);
             $("#slider-val").attr("min", data.min);
-            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.max);
             if (!data.checkable) {
+                $("#slider").val(data.min);
+                $("#slider-val").val(data.min);
                 nextRound(data);
             }
         }
         else {
             $("#slider").attr("min", data.min);
-            $("#slider").val(data.min);
             $("#slider").attr("max", data.otherMax);
             $("#slider-val").attr("min", data.min);
-            $("#slider-val").val(data.min);
             $("#slider-val").attr("max", data.otherMax);
             if (!data.checkable) {
+                $("#slider").val(data.min);
+                $("#slider-val").val(data.min);
                 nextRound(data);
             }
             else {

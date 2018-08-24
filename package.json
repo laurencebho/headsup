@@ -13,8 +13,26 @@
     "@types/node": "^10.5.8"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "Laurence Ho",
+  "license": "ISC",
+  "cloud-repo-tools": {
+    "test": {
+      "app": {
+        "msg": "Hello, world!"
+      }
+    },
+    "requiresKeyFile": false,
+    "requiresProjectId": false
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laurencebho/headsup.git"
+  },
+  "bugs": {
+    "url": "https://github.com/laurencebho/headsup/issues"
+  },
+  "homepage": "https://github.com/laurencebho/headsup#readme"
 }

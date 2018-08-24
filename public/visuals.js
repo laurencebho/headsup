@@ -386,8 +386,10 @@ function advanceRound(data) {
     }, 2000);
     window.setTimeout(function() {
         if (data.cards) {
-            dealAudio.play()
-            dealCards(data.cards);
+            if (data.cards.length > 0) {
+                dealAudio.play()
+                dealCards(data.cards);
+            }
         }
     }, 4000);
 }
