@@ -10,43 +10,43 @@ let Application = PIXI.Application,
 
 let style = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#000000"
 });
 
 let callStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#e24343"
 });
 
 let checkStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#3374ff"
 });
 
 let betStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#20ca4f"
 });
 
 let foldStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#8c918d"
 });
 
 let winStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#8325c4"
 });
 
 let stakeStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: 20,
+  fontSize: "2em",
   fill: "#045d2b",
   fontWeight: "bold"
 });
@@ -59,7 +59,8 @@ let potAudio = new Audio("sounds/updatepot.mp3");
 let winAudio = new Audio("sounds/win.mp3");
 
 let betsThisRound = 0;
-
+let widthScaling = 768;
+let heightScaling = 700;
 let tableCards = new Container();
 let holeCards = new Container();
 let cardBacks = new Container();
@@ -72,11 +73,12 @@ let player = new Text("", style);
 let pot = new Text("", style);
 let dealer = new Sprite();
 let app = new Application({
-width: 1200,
-height: 700,
-antialias: true,
-transparent: false, 
-resolution: 1
+    width: widthScaling,
+    height: heightScaling,
+    antialias: true,
+    transparent: false, 
+    //autoResize: true,
+    resolution: 2 //high res text
 });
 
 app.renderer.backgroundColor = 0xffffff;
@@ -140,17 +142,18 @@ loader
 ])
 .load(setup);
 
+let h = 700,//app.view.height,
+    w = 768;//app.view.width;
 
 function setup() {
-    opp.position.set(app.view.width / 2, 210);
-    oppStake.position.set(app.view.width / 2 - 130, 245);
-    oppStack.position.set(app.view.width / 2, 245);
-    player.position.set(app.view.width / 2, 620);
-    playerStake.position.set(app.view.width / 2 - 130, app.view.height / 2 + 75);
-    playerStack.position.set(app.view.width / 2, 655);
-    pot.position.set(app.view.width / 2, app.view.height / 2 + 75);
+    opp.position.set(w / 2, h * 210/heightScaling);
+    oppStake.position.set(w / 2 - w * 130/widthScaling, h * 245/heightScaling);
+    oppStack.position.set(w / 2, h * 245/heightScaling);
+    player.position.set(w / 2, h * 620/heightScaling);
+    playerStake.position.set(w / 2 - w * 130/widthScaling, h / 2 + h * 75/heightScaling);
+    playerStack.position.set(w / 2, h * 655/heightScaling);
+    pot.position.set(w / 2, h / 2 + h * 75/heightScaling);
     dealer.texture = resources["cards/dealer.png"].texture;
-    //dealer.scale.set(0.6, 0.6);
     dealer.visible = false;
     app.stage.addChild(opp);
     app.stage.addChild(oppStack);
@@ -162,20 +165,21 @@ function setup() {
     app.stage.addChild(dealer);
     for (var i=0; i<2; i++) {
         let card = new Sprite(resources["cards/back.png"].texture);
-        card.scale.set(0.4, 0.4);
+        card.scale.set(0.4);
         if (i==0) {
-            card.x = app.view.width / 2 - card.width - 10;
+            card.x = w / 2 - card.width - app.view.width * 10/widthScaling;
         }
         else {
-            card.x = app.view.width / 2 + 10;
+            card.x = w / 2 + app.view.width * 10/widthScaling;
         }
-        card.y = 50;
+        card.y = h * 50/heightScaling;
         cardBacks.addChild(card);
     }
     cardBacks.visible = false;
     app.stage.addChild(cardBacks);
     app.stage.addChild(tableCards);
     app.stage.addChild(holeCards);
+    resize();
 }
 
 socket.on("game created", function() {
@@ -193,14 +197,14 @@ socket.on("other player disconnected", function() {
 socket.on("hole cards", function(cards) {
     for (let i=0; i<2; i++) {
         let card = new Sprite(resources["cards/" + cards[i] + ".png"].texture);
-        card.scale.set(0.4, 0.4);
+        card.scale.set(0.4);
         if (i==0) {
-            card.x = app.view.width / 2 - card.width - 10;
+            card.x = w / 2 - card.width - w * 10/widthScaling;
         }
         else {
-            card.x = app.view.width / 2 + 10;
+            card.x = w / 2 + w * 10/widthScaling;
         }
-        card.y = 460;
+        card.y = h * 460/heightScaling;
         holeCards.addChild(card);
     }
     cardBacks.visible = true;
@@ -214,14 +218,15 @@ socket.on("new hand", function(id) { //reset everything
     oppStake.text = "";
     playerStake.text = "";
     if (socket.id == id) {
-        dealer.position.set(app.view.width / 2 - 45, 620);
+        dealer.position.set(w / 2 - w * 45/widthScaling, h * 620/heightScaling);
     }
     else {
-        dealer.position.set(app.view.width / 2 - 45, 210);
+        dealer.position.set(w / 2 - w * 45/widthScaling, h * 210/heightScaling);
     }
     if (!dealer.visible) {
         dealer.visible = true;
     }
+    console.log(dealer.position.x + ", " + dealer.position.y);
 });
 
 
@@ -309,7 +314,7 @@ socket.on("fold", function(data) {
         window.setTimeout(()=>{flashText(player, "Winner", winStyle)}, 4000);
         window.setTimeout(()=>{
             winAudio.play();
-            stack.text = data.winnerStack;
+            playerStack.text = data.winnerStack;
             pot.text = "Pot: 0";
         }, 6000);
     }
@@ -363,13 +368,36 @@ socket.on("game created", function(data) {
     }
 });
 
+$(window).on("resize", resize);
+
+function resize() {
+    let widthRatio = window.innerWidth * 0.7/(app.stage.scale.x * w * 2);
+    let heightRatio = window.innerHeight * 0.7/(app.stage.scale.x * h * 2);
+    let prevScale = app.stage.scale.x;
+    if (heightRatio > widthRatio) {
+        app.stage.scale.set(app.stage.scale.x * widthRatio);
+    }
+    else {
+        app.stage.scale.set(app.stage.scale.x * heightRatio);
+    }
+    app.renderer.resize(w * app.stage.scale.x, h * app.stage.scale.x);
+    /*
+    console.log("scaling by " + app.stage.scale.x/prevScale);
+    console.log("new scale: " + app.stage.scale.x);
+    console.log("new renderer dimensions: (" + app.renderer.width + ", " + app.renderer.height + ")");
+    console.log("width ratio: " + window.innerWidth * 0.7/(app.stage.scale.x * w * 2));
+    console.log("height ratio: " + window.innerHeight * 0.7/(app.stage.scale.x * h * 2));
+    */
+}
+
+
 function dealCards(cards) {
     console.log("Dealing " + cards.length + " cards");
     for (let i=0; i<cards.length; i++) {
         let card = new Sprite(resources["cards/" + cards[i] + ".png"].texture);
-        card.scale.set(0.4, 0.4);
-        card.x = (app.view.width - 5 * (card.width + 20)) / 2 + tableCards.children.length * (card.width + 20);
-        card.y = app.view.height / 2 - card.height / 2;
+        card.scale.set(0.4);
+        card.x = (w - w * 5/widthScaling * (card.width + w * 20/widthScaling)) / 2 + tableCards.children.length * (card.width + w * 20/widthScaling);
+        card.y = h / 2 - card.height / 2;
         tableCards.addChild(card);
     }
 }

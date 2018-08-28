@@ -1,7 +1,7 @@
 var socket = io();
 
 $(function () {
-    console.log("dimensions: (" + $(window).width() + ", " + $(window).height() + ")");
+    console.log("dimensions: (" + $(window).width() + ", " + $(document).height() + ")");
     socket.on("connect", function() {
         if ($("#nickname-div").css("display") === "block") { //on page refresh hide everything
                 $("#nickname-div").css("display", "none");
@@ -9,7 +9,7 @@ $(function () {
         if ($("#chat-div").css("display") === "block") { 
             $("#chat-div").css("display", "none");
         }
-        if ($("#waiting-div").css("display") === "block") {
+        if ($("#waiting-div").css("display") === "flex") {
             $("#waiting-div").css("display", "none");
         }
         if ($("#actions-div").css("display") === "block") {
@@ -22,8 +22,9 @@ $(function () {
         console.log("nickname: " + nickname);
         if (nickname) {
             socket.nickname = nickname;
-            $("body").append($("<p class='reconnect' style='font-size: 28px; margin: 20% 0 0 40%; float: left'>").text("Hi " + nickname + "."));
-            $("body").append("<input class='reconnect' id='reconnect-button' type='button' value='Play' style='margin: 20% 0 0 10px;'>");
+            $("#messages").empty();
+            $("#messages").append($("<p class='reconnect' style='font-size: 4vh; float: left;'>").text("Hi " + nickname + "."));
+            $("#messages").append("<input class='reconnect' id='reconnect-button' type='button' value='Play' style='margin-left: 0.4vw;'>");
         }
         else {
             $("#nickname-div").css("display", "block");
@@ -131,12 +132,12 @@ $(function () {
             socket.nickname = name;
         }
         $("#nickname-div").css("display", "none");
-        $("#waiting-div").css("display", "block");
+        $("#waiting-div").css("display", "flex");
     });
 
     socket.on("nickname error", function(msg) {
         console.log("Error with nickname");
-        $("<p style='color:#dc0011; font-size:16px;'>").text(msg).hide().appendTo("#nickname-error").fadeIn(200);
+        $("<p style='color:#dc0011; font-size:2vh;'>").text(msg).hide().appendTo("#nickname-error").fadeIn(200);
     });
 
     $("body").on("click", ".home-button", function() {
@@ -196,8 +197,8 @@ $(function () {
         $("#chat-div").css("display", "none");
         $("#actions-div").css("display", "none");
         var message = (socket.id == winnerID ? "You won." : "You lost.");
-        $("body").append($("<p id='end-message' style='font-size: 28px; margin: 20% 0 0 40%; float: left;'>").text(message));
-        $("body").append($("<input type='button' class='home-button' value='Home' style='margin: 20% 40% 0 10px;'>"));
+        $("#messages").append($("<p class='end-message' style='font-size: 4vh; float: left;'>").text(message));
+        $("#messages").append($("<input class='end-message home-button' type='button' value='Home' style='margin-left: 0.4vw; float: left;'>"));
     })
 
     socket.on("message", function(data) {
@@ -224,8 +225,8 @@ $(function () {
         $("#chat-div").css("display", "none");
         $("#actions-div").css("display", "none");
         var message = ("Your opponent disconnected.");
-        $("body").append($("<p id='dc-message' style='font-size: 28px; margin: 20% 0 0 40%; float: left;'>").text(message));
-        $("body").append($("<input type='button' class='home-button' value='Home' style='margin: 20% 0 0 10px;'>"));
+        $("#messages").append($("<p class='dc-message' style='font-size: 4vh; float: left;'>").text(message));
+        $("#messages").append($("<input class='dc-message home-button' type='button' value='Home' style='margin-left: 0.4vw;'>"));
     });
 });
 
