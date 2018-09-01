@@ -1,5 +1,3 @@
-var socket = io();
-
 let Application = PIXI.Application,
     loader = PIXI.loader,
     resources = PIXI.loader.resources,
@@ -10,43 +8,43 @@ let Application = PIXI.Application,
 
 let style = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#000000"
 });
 
 let callStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#e24343"
 });
 
 let checkStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#3374ff"
 });
 
 let betStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#20ca4f"
 });
 
 let foldStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#8c918d"
 });
 
 let winStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#8325c4"
 });
 
 let stakeStyle = new TextStyle({
   fontFamily: ["Basic", "Arial"],
-  fontSize: "2em",
+  fontSize: "3em",
   fill: "#045d2b",
   fontWeight: "bold"
 });
@@ -58,9 +56,14 @@ let dealAudio = new Audio("sounds/deal.mp3");
 let potAudio = new Audio("sounds/updatepot.mp3");
 let winAudio = new Audio("sounds/win.mp3");
 
+let h = 1000,//app.view.height,
+    w = 800,//app.view.width;
+    widthScaling = 700,
+    heightScaling = 700,
+    cardScale = 0.6,
+    res = 1.2;
+
 let betsThisRound = 0;
-let widthScaling = 768;
-let heightScaling = 700;
 let tableCards = new Container();
 let holeCards = new Container();
 let cardBacks = new Container();
@@ -73,12 +76,12 @@ let player = new Text("", style);
 let pot = new Text("", style);
 let dealer = new Sprite();
 let app = new Application({
-    width: widthScaling,
-    height: heightScaling,
+    width: w,
+    height: h,
     antialias: true,
     transparent: false, 
     //autoResize: true,
-    resolution: 2 //high res text
+    resolution: res
 });
 
 app.renderer.backgroundColor = 0xffffff;
@@ -142,9 +145,6 @@ loader
 ])
 .load(setup);
 
-let h = 700,//app.view.height,
-    w = 768;//app.view.width;
-
 function setup() {
     opp.position.set(w / 2, h * 210/heightScaling);
     oppStake.position.set(w / 2 - w * 130/widthScaling, h * 245/heightScaling);
@@ -154,6 +154,7 @@ function setup() {
     playerStack.position.set(w / 2, h * 655/heightScaling);
     pot.position.set(w / 2, h / 2 + h * 75/heightScaling);
     dealer.texture = resources["cards/dealer.png"].texture;
+    dealer.scale.set(0.3);
     dealer.visible = false;
     app.stage.addChild(opp);
     app.stage.addChild(oppStack);
@@ -165,7 +166,7 @@ function setup() {
     app.stage.addChild(dealer);
     for (var i=0; i<2; i++) {
         let card = new Sprite(resources["cards/back.png"].texture);
-        card.scale.set(0.4);
+        card.scale.set(cardScale);
         if (i==0) {
             card.x = w / 2 - card.width - app.view.width * 10/widthScaling;
         }
@@ -182,8 +183,13 @@ function setup() {
     resize();
 }
 
+socket.on("connect", function() {
+    $("canvas").css("display", "none");
+});
+
 socket.on("game created", function() {
-    document.body.insertBefore(app.view, document.getElementById("actions-div"));
+    let actions = document.getElementById("actions-div");
+    actions.parentNode.insertBefore(app.view, actions);
 });
 
 socket.on("game complete", function() {
@@ -197,7 +203,7 @@ socket.on("other player disconnected", function() {
 socket.on("hole cards", function(cards) {
     for (let i=0; i<2; i++) {
         let card = new Sprite(resources["cards/" + cards[i] + ".png"].texture);
-        card.scale.set(0.4);
+        card.scale.set(cardScale);
         if (i==0) {
             card.x = w / 2 - card.width - w * 10/widthScaling;
         }
@@ -218,10 +224,10 @@ socket.on("new hand", function(id) { //reset everything
     oppStake.text = "";
     playerStake.text = "";
     if (socket.id == id) {
-        dealer.position.set(w / 2 - w * 45/widthScaling, h * 620/heightScaling);
+        dealer.position.set(w / 2 - w * 55/widthScaling, h * 620/heightScaling);
     }
     else {
-        dealer.position.set(w / 2 - w * 45/widthScaling, h * 210/heightScaling);
+        dealer.position.set(w / 2 - w * 55/widthScaling, h * 210/heightScaling);
     }
     if (!dealer.visible) {
         dealer.visible = true;
@@ -371,8 +377,8 @@ socket.on("game created", function(data) {
 $(window).on("resize", resize);
 
 function resize() {
-    let widthRatio = window.innerWidth * 0.7/(app.stage.scale.x * w * 2);
-    let heightRatio = window.innerHeight * 0.7/(app.stage.scale.x * h * 2);
+    let widthRatio = window.innerWidth * 0.7/(app.stage.scale.x * w * res);
+    let heightRatio = window.innerHeight * 0.8/(app.stage.scale.x * h * res);
     let prevScale = app.stage.scale.x;
     if (heightRatio > widthRatio) {
         app.stage.scale.set(app.stage.scale.x * widthRatio);
@@ -381,13 +387,6 @@ function resize() {
         app.stage.scale.set(app.stage.scale.x * heightRatio);
     }
     app.renderer.resize(w * app.stage.scale.x, h * app.stage.scale.x);
-    /*
-    console.log("scaling by " + app.stage.scale.x/prevScale);
-    console.log("new scale: " + app.stage.scale.x);
-    console.log("new renderer dimensions: (" + app.renderer.width + ", " + app.renderer.height + ")");
-    console.log("width ratio: " + window.innerWidth * 0.7/(app.stage.scale.x * w * 2));
-    console.log("height ratio: " + window.innerHeight * 0.7/(app.stage.scale.x * h * 2));
-    */
 }
 
 
@@ -395,8 +394,8 @@ function dealCards(cards) {
     console.log("Dealing " + cards.length + " cards");
     for (let i=0; i<cards.length; i++) {
         let card = new Sprite(resources["cards/" + cards[i] + ".png"].texture);
-        card.scale.set(0.4);
-        card.x = (w - w * 5/widthScaling * (card.width + w * 20/widthScaling)) / 2 + tableCards.children.length * (card.width + w * 20/widthScaling);
+        card.scale.set(cardScale);
+        card.x = (w - w * 5/w * (card.width + w * 20/w)) / 2 + tableCards.children.length * (card.width + w * 20/w);
         card.y = h / 2 - card.height / 2;
         tableCards.addChild(card);
     }

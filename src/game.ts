@@ -210,9 +210,11 @@ export class Game {
 			b.bet = a.bet;
 			var bet = a.bet;
 		}
-		for (var i=0; i<this._players.length; i++) { //decrease stacks
-			console.log("Player " + i + " stack changed by " + this._players[i].bet * -1);
-			this._players[i].changeStack(this._players[i].bet * -1);
+		if (!(this._gameStage == 1 && !allIn && a.bet == 20)) {
+			for (var i=0; i<this._players.length; i++) { //decrease stacks
+				console.log("Player " + i + " stack changed by " + this._players[i].bet * -1);
+				this._players[i].changeStack(this._players[i].bet * -1);
+		}
 		}
 		for (var i=0; i<this._players.length; i++) {
 			if (id == this._players[i].id) {
@@ -223,7 +225,7 @@ export class Game {
 
 		console.log("Game stage: " + this._gameStage);
 		if (this._gameStage == 1 && a.bet == 20 && !allIn) {
-			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, min: (otherStack >= 40 ? 40 : otherStack), max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: true, stack: calledStack});
+			this._io.to(this.id).emit('call', {amount: bet, pot: this._pot, min: (otherStack >= 40 ? 40 : otherStack), max: calledStack, otherMax: otherStack, id: id, dealer: this._players[this._dealer].id, checkable: true, stack: calledStack - 20});
 		}
 		else {
 			var cardsToDeal = !allIn ? this.getCardsToDeal() : this.getCardsAllIn();
@@ -278,6 +280,11 @@ export class Game {
 				if (id == this._players[i].id) {
 					var otherStack = this._players[(i+1)%2].stack;
 					var checkedStack = this._players[i].stack;
+				}
+			}
+			if (this._gameStage == 1) {
+				for (var i=0; i<this._players.length; i++) { //if bb call followed by a check
+					this._players[i].changeStack(this._players[i].bet * -1);
 				}
 			}
 			var cardsToDeal = this.getCardsToDeal();
