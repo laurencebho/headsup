@@ -1,4 +1,4 @@
-var socket = io(":8080");
+var socket = io();
 
 $(function () {
     console.log("dimensions: (" + $(window).width() + ", " + $(document).height() + ")");
