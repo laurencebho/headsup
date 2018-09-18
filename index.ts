@@ -97,7 +97,7 @@ eventEmitter.on('game complete', function(id) {
   server.removeGame(id);
 });
 
-http.listen(port, (err) => {
+http.listen(process.env.PORT || port, (err) => {
   if (err) {
     return console.log(err);
   }

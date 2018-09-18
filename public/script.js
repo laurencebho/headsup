@@ -208,6 +208,7 @@ $(function () {
         else {
             $("#chat").append($("<li style='color: #dc0011'>").text(data.message));
         }
+        $('#chat-display-div').animate({scrollTop: $('#chat').prop("scrollHeight")}, 500);
     });
 
     socket.on("result", function(data) { //no need for message filter, append message straight to chat
